@@ -1,0 +1,63 @@
+name: AutoBloga Content Generator
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      force_publish:
+        description: Force publish the generated content
+        type: boolean
+        default: false
+
+jobs:
+  generate-content:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run AutoBloga workflow
+        id: run_autoblog
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GOOGLE_SEARCH_ENGINE_ID: ${{ secrets.GOOGLE_SEARCH_ENGINE_ID }}
+          WORDPRESS_URL: ${{ secrets.WORDPRESS_URL }}
+          WORDPRESS_USERNAME: ${{ secrets.WORDPRESS_USERNAME }}
+          WORDPRESS_PASSWORD: ${{ secrets.WORDPRESS_PASSWORD }}
+          FORCE_PUBLISH: ${{ github.event.inputs.force_publish }}
+        run: node src/index.js
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "AutoBloga Bot"
+          git config --global user.email "autoblog-bot@users.noreply.github.com"
+      
+      - name: Commit and push changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            git add data/posts/*.json docs/posts/*.json
+            git commit -m "Update: Automated blog post creation $(date +'%Y-%m-%d')"
+            git push
+          else
+            echo "No changes to commit"
+          fi

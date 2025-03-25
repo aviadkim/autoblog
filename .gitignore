@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+data/logs/
+*.log
+
+# Runtime data
+data/trends/
+.pids
+*.pid
+*.seed
+
+# Configuration
+config.json
+
+# IDE
+.vscode/
+.idea/
+
+# System Files 
+.DS_Store
+Thumbs.db
